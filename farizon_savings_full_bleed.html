@@ -1,0 +1,484 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>מחשבון חיסכון FARIZON – 100% רוחב</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap');
+    :root{
+      --surface: rgba(255,255,255,0.75);
+      --surface-hover: rgba(255,255,255,0.9);
+      --border: rgba(79,195,220,0.3);
+      --text: #102a43;
+      --muted: #64748b;
+      --accent: #4fc3dc;
+      --accent2: #50d8b0;
+      --radius: 18px;
+      --shadow: 0 8px 32px rgba(79,195,220,0.22);
+      --pad: clamp(10px, 1.8vw, 22px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e8f4f8 0%, #f0f8fc 50%, #ffffff 100%);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    .blur-bg {
+      position: fixed; inset: -40% -40% -40% -40%;
+      background:
+        radial-gradient(600px 400px at 15% 30%, rgba(79,195,220,0.25), transparent 60%),
+        radial-gradient(500px 380px at 85% 70%, rgba(80,216,176,0.18), transparent 60%);
+      filter: blur(80px);
+      z-index: -1;
+    }
+
+    /* Header – full bleed */
+    header {
+      width: 100vw;
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(14px) saturate(180%);
+      background: rgba(255,255,255,0.8);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-content {
+      padding: var(--pad) clamp(14px, 2vw, 28px);
+      display: grid;
+      grid-template-columns: 1fr;
+      place-items: center;
+      text-align: center;
+      gap: 6px;
+    }
+    .title-wrapper h1 { font-size: clamp(22px, 2.3vw, 32px); font-weight: 800; letter-spacing: -0.4px; }
+    .subtitle { color: var(--muted); font-size: clamp(13px, 1.3vw, 16px); }
+
+    /* Main container – full bleed grid */
+    .container {
+      width: 100vw;
+      padding: calc(var(--pad) + 8px) clamp(10px, 2vw, 24px) 50px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: clamp(10px, 1.5vw, 22px);
+    }
+
+    /* Cards – edge to edge look */
+    .card {
+      background: var(--surface);
+      backdrop-filter: blur(18px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2vw, 28px);
+      box-shadow: var(--shadow);
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .card:hover { background: var(--surface-hover); box-shadow: 0 12px 40px rgba(79,195,220,0.28); }
+    .card h3 { font-size: clamp(18px, 1.6vw, 22px); font-weight: 800; margin-bottom: 14px; text-align: center; }
+
+    /* Inputs */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: clamp(10px, 1.4vw, 20px);
+      align-items: end;
+    }
+    .form-group { grid-column: span 3; }
+    .form-group.wide { grid-column: span 12; }
+    label { display:block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    input, select {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+      font-size: 16px; background: rgba(255,255,255,0.95);
+      text-align: center;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,195,220,0.14);
+      background: white;
+    }
+    .btn {
+      grid-column: span 12;
+      justify-self: center;
+      width: min(320px, 90%);
+      padding: 14px 16px;
+      border: none; border-radius: 12px;
+      color: white; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(79,195,220,0.30);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(79,195,220,0.36); }
+
+    /* Results grid full width */
+    .results { display: none; }
+    .results.show { display: grid; grid-template-columns: repeat(12, 1fr); gap: clamp(10px, 1.5vw, 22px); }
+    .results > .card:nth-child(1) { grid-column: 1 / -1; }
+    .results > .card:nth-child(2) { grid-column: 1 / -1; }
+    .results > .card:nth-child(3) { grid-column: span 6; }
+    .results > .card:nth-child(4) { grid-column: span 6; }
+    .results > .card:nth-child(5) { grid-column: 1 / -1; }
+
+    /* KPI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: clamp(10px, 1.2vw, 18px);
+      padding: clamp(12px, 1.5vw, 22px);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(79,195,220,0.10), rgba(80,216,176,0.10));
+    }
+    .kpi {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(79,195,220,0.28);
+      border-radius: 14px;
+      padding: clamp(14px, 1.4vw, 20px);
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(79,195,220,0.18);
+    }
+    .kpi-label { font-size: 13px; color: var(--muted); font-weight: 800; letter-spacing: 0.4px; }
+    .kpi-value {
+      font-size: clamp(26px, 2.2vw, 36px);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), #3a9fb5);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-top: 6px;
+    }
+    .kpi-subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* Table */
+    .comparison-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.6); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .comparison-table th { background: rgba(79,195,220,0.15); padding: 14px; text-align: center; font-weight: 900; }
+    .comparison-table td { padding: 14px; text-align: center; border-bottom: 1px solid rgba(79,195,220,0.1); font-weight: 700; }
+    .farizon-col { background: rgba(79,195,220,0.08); }
+    .rival-col { background: rgba(248,113,113,0.08); }
+    .saving-col { background: rgba(80,216,176,0.08); color: #1d9d7d; font-weight: 900; }
+
+    /* Charts */
+    .chart-container { position: relative; height: clamp(280px, 38vh, 420px); padding: 6px 0; }
+    canvas { display:block; margin-inline: auto; max-width: 100%; }
+
+    /* Responsive tweaks */
+    @media (max-width: 1024px) {
+      .form-group { grid-column: span 6; }
+      .results > .card:nth-child(3), .results > .card:nth-child(4) { grid-column: 1 / -1; }
+    }
+    @media (max-width: 560px) {
+      .form-group { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <div class="blur-bg"></div>
+
+  <header>
+    <div class="header-content">
+      <div class="title-wrapper">
+        <h1>מחשבון חיסכון FARIZON</h1>
+        <div class="subtitle">גרסת Full‑bleed — כל הקוביות נמתחות לרוחב המסך</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card" style="grid-column: 1 / -1;">
+      <h3>הזן פרטים לחישוב</h3>
+      <div class="form-grid">
+        <div class="form-group wide">
+          <label for="excelInput">טען/י קובץ אקסל (מבנה נתמך)</label>
+          <input type="file" id="excelInput" accept=".xlsx,.xls" />
+          <small style="display:block; color: var(--muted); margin-top:6px;">
+            עמודות: type, key, name, energyCostPer100km, maintenanceCostPerYear, licensePerYear
+          </small>
+        </div>
+        <div class="form-group">
+          <label for="kmInput">כמות ק״מ שנתית</label>
+          <input type="number" id="kmInput" placeholder="לדוגמה: 50000" min="0" step="1000">
+        </div>
+        <div class="form-group">
+          <label for="farizonModel">בחר/י דגם FARIZON</label>
+          <select id="farizonModel"><option value="">בחר דגם</option></select>
+        </div>
+        <div class="form-group">
+          <label for="rivalModel">בחר/י רכב מתחרה</label>
+          <select id="rivalModel"><option value="">בחר דגם</option></select>
+        </div>
+        <button class="btn" id="calcBtn">חשב/י חיסכון</button>
+      </div>
+    </section>
+
+    <section class="results" id="resultsSection">
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>תוצאות החיסכון</h3>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">חיסכון שנתי כולל</div>
+            <div class="kpi-value" id="totalSaving">₪0</div>
+            <div class="kpi-subtitle">לשנה</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">חיסכון באנרגיה</div>
+            <div class="kpi-value" id="energySaving">₪0</div>
+            <div class="kpi-subtitle">דלק/חשמל</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">חיסכון בתחזוקה</div>
+            <div class="kpi-value" id="maintenanceSaving">₪0</div>
+            <div class="kpi-subtitle">שירותים ותיקונים</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">חיסכון ברישוי</div>
+            <div class="kpi-value" id="licenseSaving">₪0</div>
+            <div class="kpi-subtitle">אגרת רישוי</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>השוואת עלויות מפורטת</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>סוג עלות</th>
+              <th class="farizon-col">FARIZON</th>
+              <th class="rival-col">רכב מתחרה</th>
+              <th class="saving-col">חיסכון</th>
+            </tr>
+          </thead>
+          <tbody id="comparisonTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="grid-column: span 6;">
+        <h3>פילוח עלויות שנתיות</h3>
+        <div class="chart-container"><canvas id="costBreakdownChart"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column: span 6;">
+        <h3>השוואת עלויות</h3>
+        <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>תחזית חיסכון ל-5 שנים</h3>
+        <div class="chart-container"><canvas id="projectionChart"></canvas></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const fmt = new Intl.NumberFormat('he-IL');
+    let vehicleData = {
+      farizon: {
+        sv: { name: 'FARIZON SV', energyCostPer100km: 8.5, maintenanceCostPerYear: 3500, licensePerYear: 1200 },
+        ev: { name: 'FARIZON EV', energyCostPer100km: 12, maintenanceCostPerYear: 5000, licensePerYear: 1800 },
+        pro: { name: 'FARIZON PRO', energyCostPer100km: 18, maintenanceCostPerYear: 7500, licensePerYear: 2500 }
+      },
+      rival: {
+        jumpy: { name: 'Peugeot e-Expert', energyCostPer100km: 35, maintenanceCostPerYear: 8500, licensePerYear: 2800 },
+        traffic: { name: 'Renault Traffic', energyCostPer100km: 38, maintenanceCostPerYear: 9200, licensePerYear: 3000 },
+        boxer: { name: 'Peugeot Boxer', energyCostPer100km: 42, maintenanceCostPerYear: 10500, licensePerYear: 3400 },
+        ducato: { name: 'Fiat Ducato', energyCostPer100km: 40, maintenanceCostPerYear: 10000, licensePerYear: 3200 },
+        sprinter: { name: 'Mercedes Sprinter', energyCostPer100km: 45, maintenanceCostPerYear: 11500, licensePerYear: 3600 }
+      }
+    };
+
+    // Excel parsing
+    excelInput.addEventListener('change', async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+
+      const nextData = { farizon: {}, rival: {} };
+      for (const row of rows) {
+        const type = String(row.type || '').trim().toLowerCase();
+        const key = String(row.key || '').trim();
+        if (!['farizon', 'rival'].includes(type) || !key) continue;
+        nextData[type][key] = {
+          name: String(row.name || key),
+          energyCostPer100km: Number(row.energyCostPer100km || 0),
+          maintenanceCostPerYear: Number(row.maintenanceCostPerYear || 0),
+          licensePerYear: Number(row.licensePerYear || 0)
+        };
+      }
+      if (!Object.keys(nextData.farizon).length || !Object.keys(nextData.rival).length) {
+        alert('האקסל נטען אך חסרים נתונים. ודאי את שמות העמודות והערכים.');
+        return;
+      }
+      vehicleData = nextData;
+      populateSelects();
+      alert('האקסל נטען! הדגמים עודכנו.');
+    });
+
+    const farizonSel = document.getElementById('farizonModel');
+    const rivalSel = document.getElementById('rivalModel');
+    const resultsSection = document.getElementById('resultsSection');
+
+    function populateSelects() {
+      const add = (sel, obj) => {
+        sel.innerHTML = '<option value="">בחר דגם</option>' +
+          Object.entries(obj).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+      };
+      add(farizonSel, vehicleData.farizon);
+      add(rivalSel, vehicleData.rival);
+    }
+    populateSelects();
+
+    document.getElementById('calcBtn').addEventListener('click', calculateSavings);
+
+    let currentResults = null;
+    const charts = { breakdown: null, comparison: null, projection: null };
+
+    function calculateSavings() {
+      const km = Number(document.getElementById('kmInput').value);
+      const fKey = farizonSel.value; const rKey = rivalSel.value;
+      if (!km || !fKey || !rKey || km < 0 || isNaN(km)) {
+        alert('נא למלא את כל השדות (ק"מ חייב להיות מספר חיובי) ולבחור דגמים.');
+        return;
+      }
+      const f = vehicleData.farizon[fKey]; const rv = vehicleData.rival[rKey];
+      const farizonEnergy = (km / 100) * f.energyCostPer100km;
+      const rivalEnergy   = (km / 100) * rv.energyCostPer100km;
+      const energySaving = rivalEnergy - farizonEnergy;
+      const maintenanceSaving = rv.maintenanceCostPerYear - f.maintenanceCostPerYear;
+      const licenseSaving = rv.licensePerYear - f.licensePerYear;
+      const totalSaving = energySaving + maintenanceSaving + licenseSaving;
+
+      currentResults = {
+        km,
+        farizon: { name: f.name, energy: farizonEnergy, maintenance: f.maintenanceCostPerYear, license: f.licensePerYear,
+          total: farizonEnergy + f.maintenanceCostPerYear + f.licensePerYear },
+        rival: { name: rv.name, energy: rivalEnergy, maintenance: rv.maintenanceCostPerYear, license: rv.licensePerYear,
+          total: rivalEnergy + rv.maintenanceCostPerYear + rv.licensePerYear },
+        savings: { energy: energySaving, maintenance: maintenanceSaving, license: licenseSaving, total: totalSaving }
+      };
+      displayResults();
+    }
+
+    function currency(v){ return '₪' + (new Intl.NumberFormat('he-IL')).format(Math.round(v)); }
+
+    function displayResults(){
+      const r = currentResults;
+      totalSaving.textContent = currency(r.savings.total);
+      energySaving.textContent = currency(r.savings.energy);
+      maintenanceSaving.textContent = currency(r.savings.maintenance);
+      licenseSaving.textContent = currency(r.savings.license);
+
+      comparisonTableBody.innerHTML = `
+        <tr>
+          <td>עלות אנרגיה/דלק</td>
+          <td class="farizon-col">${currency(r.farizon.energy)}</td>
+          <td class="rival-col">${currency(r.rival.energy)}</td>
+          <td class="saving-col">${currency(r.savings.energy)}</td>
+        </tr>
+        <tr>
+          <td>עלות תחזוקה</td>
+          <td class="farizon-col">${currency(r.farizon.maintenance)}</td>
+          <td class="rival-col">${currency(r.rival.maintenance)}</td>
+          <td class="saving-col">${currency(r.savings.maintenance)}</td>
+        </tr>
+        <tr>
+          <td>אגרת רישוי</td>
+          <td class="farizon-col">${currency(r.farizon.license)}</td>
+          <td class="rival-col">${currency(r.rival.license)}</td>
+          <td class="saving-col">${currency(r.savings.license)}</td>
+        </tr>
+        <tr style="font-weight:800;background:rgba(79,195,220,0.1);">
+          <td>סה"כ</td>
+          <td class="farizon-col">${currency(r.farizon.total)}</td>
+          <td class="rival-col">${currency(r.rival.total)}</td>
+          <td class="saving-col">${currency(r.savings.total)}</td>
+        </tr>`;
+
+      resultsSection.classList.add('show');
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      updateCharts();
+    }
+
+    function destroyCharts(){ for (const k of Object.keys(charts)) { charts[k]?.destroy?.(); charts[k] = null; } }
+
+    function updateCharts(){
+      const r = currentResults; if (!r) return; destroyCharts();
+
+      charts.breakdown = new Chart(costBreakdownChart.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['אנרגיה', 'תחזוקה', 'רישוי'],
+          datasets: [{ data: [r.farizon.energy, r.farizon.maintenance, r.farizon.license],
+            backgroundColor: ['rgba(79,195,220,0.85)', 'rgba(80,216,176,0.85)', 'rgba(109,213,232,0.85)'],
+            borderColor: '#fff', borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', rtl: true },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${currency(ctx.parsed)}` } }
+          }
+        }
+      });
+
+      charts.comparison = new Chart(comparisonChart.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: ['אנרגיה', 'תחזוקה', 'רישוי', 'סה"כ'],
+          datasets: [
+            { label: 'FARIZON', data: [r.farizon.energy, r.farizon.maintenance, r.farizon.license, r.farizon.total],
+              backgroundColor: 'rgba(79,195,220,0.85)', borderColor: 'rgba(79,195,220,1)', borderWidth: 2, borderRadius: 8 },
+            { label: r.rival.name, data: [r.rival.energy, r.rival.maintenance, r.rival.license, r.rival.total],
+              backgroundColor: 'rgba(248,113,113,0.75)', borderColor: 'rgba(248,113,113,1)', borderWidth: 2, borderRadius: 8 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', rtl: true },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${currency(ctx.parsed.y)}` } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => '₪' + v.toLocaleString('he-IL') } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      const years = [1,2,3,4,5];
+      charts.projection = new Chart(projectionChart.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: years.map(y => `שנה ${y}`),
+          datasets: [
+            { label: 'עלות FARIZON', data: years.map(y => r.farizon.total * y),
+              borderColor: 'rgba(79,195,220,1)', backgroundColor: 'rgba(79,195,220,0.12)', borderWidth: 3, tension: 0.4, fill: true },
+            { label: `עלות ${r.rival.name}`, data: years.map(y => r.rival.total * y),
+              borderColor: 'rgba(248,113,113,1)', backgroundColor: 'rgba(248,113,113,0.12)', borderWidth: 3, tension: 0.4, fill: true },
+            { label: 'חיסכון מצטבר', data: years.map(y => r.savings.total * y),
+              borderColor: 'rgba(80,216,176,1)', backgroundColor: 'rgba(80,216,176,0.18)', borderWidth: 3, tension: 0.4, fill: true }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', rtl: true },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${currency(ctx.parsed.y)}` } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => '₪' + v.toLocaleString('he-IL') } },
+            x: { }
+          }
+        }
+      });
+    }
+
+    // Chart defaults
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.borderColor = 'rgba(79,195,220,0.2)';
+    Chart.defaults.font.family = 'Heebo, -apple-system, sans-serif';
+  </script>
+</body>
+</html>
